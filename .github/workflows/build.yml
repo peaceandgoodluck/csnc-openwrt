@@ -47,9 +47,11 @@ jobs:
 
       - name: Add OpenClash (pinned commit)
         run: |
-          git clone https://github.com/vernesong/OpenClash.git oc
+          git init -q oc
           cd oc
-          git checkout -q "$OPENCLASH_SHA"
+          git remote add origin https://github.com/vernesong/OpenClash.git
+          git fetch -q --depth 1 origin "$OPENCLASH_SHA"
+          git checkout -q FETCH_HEAD
           test "$(git rev-parse HEAD)" = "$OPENCLASH_SHA"
           cp -r luci-app-openclash ../openwrt/package/
 
