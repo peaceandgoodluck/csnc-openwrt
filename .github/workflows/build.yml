@@ -75,6 +75,9 @@ jobs:
                    kmod-nft-tproxy kmod-tun kmod-mt7915e; do
             grep -q "^CONFIG_PACKAGE_$p=y" .config || { echo "MISSING $p"; exit 1; }
           done
+          if grep -q '^CONFIG_RUBY_ENABLE_YJIT=y' .config; then
+            echo "YJIT enabled (would pull in rust/host)"; exit 1
+          fi
           echo "config OK"
 
       - name: Download sources
@@ -85,7 +88,27 @@ jobs:
       - name: Build
         run: |
           cd openwrt
-          make -j"$(nproc)" || make -j1 V=s
+          nproc; free -h; df -h /
+          make -j"$(nproc)"
+
+      - name: Show failed package logs
+        if: failure()
+        run: |
+          cd openwrt
+          df -h /
+          grep -rlE 'Error [0-9]|error:' logs 2>/dev/null | head -n 5 |
+          while read -r f; do
+            echo "=================== $f"
+            tail -n 80 "$f"
+          done
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: openwrt/logs/
+          retention-days: 7
 
       - name: Collect outputs
         run: |
